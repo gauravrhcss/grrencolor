@@ -1,0 +1,32 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Download Docker file from GITHUB') {
+            steps {
+                git 'https://github.com/gauravrhcss/bigpipeline.git'
+            }
+        }
+    stage('COPY Docker file from jenkins to ansible') {
+            steps {
+                sshPublisher(publishers: [sshPublisherDesc(configName: 'jenkins', transfers: [sshTransfer(cleanRemote: false, excludes: '', execCommand: 'rsync -avh -e "ssh -p 225" /var/lib/jenkins/workspace/abc1234/Dockerfile root@101.53.148.18:/project', execTimeout: 120000, flatten: false, makeEmptyDirs: false, noDefaultExcludes: false, patternSeparator: '[, ]+', remoteDirectory: '', remoteDirectorySDF: false, removePrefix: '', sourceFiles: '')], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
+            }
+        }
+        stage('BUILD DOCKER FILES On Ansible Machine') {
+            steps {
+                sshPublisher(publishers: [sshPublisherDesc(configName: 'ansible', transfers: [sshTransfer(cleanRemote: false, excludes: '', execCommand: '''cd /project
+docker build -t $JOB_NAME:v$BUILD_ID .
+docker tag $JOB_NAME:v$BUILD_ID gsaluja86/$JOB_NAME:v$BUILD_ID
+docker tag $JOB_NAME:v$BUILD_ID gsaluja86/$JOB_NAME:latest
+docker push gsaluja86/$JOB_NAME:v$BUILD_ID
+docker push gsaluja86/$JOB_NAME:latest
+docker rmi -f gsaluja86/$JOB_NAME:latest gsaluja86/$JOB_NAME:v$BUILD_ID $JOB_NAME:v$BUILD_ID''', execTimeout: 120000, flatten: false, makeEmptyDirs: false, noDefaultExcludes: false, patternSeparator: '[, ]+', remoteDirectory: '', remoteDirectorySDF: false, removePrefix: '', sourceFiles: '')], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
+        }
+        }
+   stage('Deploy Container  on Dockerhost') {
+            steps {
+               sshPublisher(publishers: [sshPublisherDesc(configName: 'ansible', transfers: [sshTransfer(cleanRemote: false, excludes: '', execCommand: 'ansible-playbook /ansible/project.yaml', execTimeout: 120000, flatten: false, makeEmptyDirs: false, noDefaultExcludes: false, patternSeparator: '[, ]+', remoteDirectory: '', remoteDirectorySDF: false, removePrefix: '', sourceFiles: '')], usePromotionTimestamp: false, useWorkspaceInPromotion: false, verbose: false)])
+            }
+        }
+    }
+}
